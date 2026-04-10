@@ -1,0 +1,6 @@
+@BioStockApi_HostAddress = http://localhost:5076
+
+GET {{BioStockApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
