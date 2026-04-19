@@ -1,41 +1,46 @@
+using Microsoft.EntityFrameworkCore;
+using BioStockApi.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+// 1. AJOUT DES SERVICES
+// On dit à .NET qu'on va utiliser des Controllers
+builder.Services.AddControllers(); 
+
+// On configure Swagger (OpenAPI)
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// On configure la base de données SQLite
+builder.Services.AddDbContext<ApiDbContext>(options =>
+    options.UseSqlite("Data Source=biostock.db"));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configuration du CORS pour autoriser React (qui tourne souvent sur le port 5173 ou 3000)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReactApp",
+        policy =>
+        {
+            policy.AllowAnyOrigin() // Plus tard, on mettra l'URL précise de ton front
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+});
+
+// 2. CONFIGURATION DU PIPELINE (Requêtes HTTP)
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
+app.UseCors("AllowReactApp");
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+// On dit à l'application de chercher les Controllers pour répondre aux URLs
+app.MapControllers(); 
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
