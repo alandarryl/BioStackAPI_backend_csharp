@@ -1,19 +1,30 @@
-# Image de construction
+# 1. ÉTAPE DE RÉCUPÉRATION DU SDK (BUILD)
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
+WORKDIR /app
 
-# Copier le fichier projet et restaurer les dépendances
-COPY ["BioStockApi.csproj", "./"]
+# Copie du fichier projet et restauration des packages NuGet
+# (On fait ça en premier pour profiter du cache Docker)
+COPY *.csproj ./
 RUN dotnet restore
 
-# Copier tout le reste et publier
-COPY . .
-RUN dotnet publish -c Release -o /app/out
+# Copie de tout le reste du code et compilation
+COPY . ./
+RUN dotnet publish -c Release -o out
 
-# Image finale (plus légère)
+# 2. ÉTAPE DE RUNTIME (EXÉCUTION)
+# On utilise une image beaucoup plus petite qui ne contient pas le SDK
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
+
+# On récupère uniquement les fichiers compilés de l'étape précédente
 COPY --from=build /app/out .
 
-# Commande de lancement
+# On s'assure que le fichier SQLite peut être écrit par l'application
+# (Important pour éviter les erreurs de permission "Read-only")
+USER root
+RUN chmod -R 777 /app
+
+# Commande pour démarrer l'API
+# REMPLACE "BioStockApi.dll" par le nom exact de ton fichier .dll 
+# si ton projet s'appelle différemment.
 ENTRYPOINT ["dotnet", "BioStockApi.dll"]
