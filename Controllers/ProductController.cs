@@ -32,4 +32,35 @@ public class ProductController : ControllerBase
         
         return CreatedAtAction(nameof(GetProducts), new { id = product.Id }, product);
     }
+
+
+// DELETE: api/product/5
+[HttpDelete("{id}")]
+public async Task<IActionResult> DeleteProduct(int id)
+{
+    var product = await _context.Products.FindAsync(id);
+    if (product == null)
+    {
+        return NotFound(); // Si l'ID n'existe pas
+    }
+
+    _context.Products.Remove(product);
+    await _context.SaveChangesAsync(); // Applique la suppression en base
+
+    return NoContent(); // Réponse standard pour une suppression réussie (204)
+}
+
+// PUT: api/product/5
+[HttpPut("{id}")]
+public async Task<IActionResult> UpdateQuantity(int id, [FromBody] int newQuantity)
+{
+    var product = await _context.Products.FindAsync(id);
+    if (product == null) return NotFound();
+
+    product.Quantity = newQuantity;
+    await _context.SaveChangesAsync();
+
+    return NoContent();
+}
+
 }

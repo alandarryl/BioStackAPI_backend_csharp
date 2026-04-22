@@ -3,33 +3,32 @@ using BioStockApi.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. AJOUT DES SERVICES
-// On dit à .NET qu'on va utiliser des Controllers
-builder.Services.AddControllers(); 
+// --- 1. CONFIGURATION DES SERVICES (Tout ce qui utilise builder.Services) ---
 
-// On configure Swagger (OpenAPI)
+builder.Services.AddControllers(); 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// On configure la base de données SQLite
 builder.Services.AddDbContext<ApiDbContext>(options =>
     options.UseSqlite("Data Source=biostock.db"));
 
-var app = builder.Build();
-
-// Configuration du CORS pour autoriser React (qui tourne souvent sur le port 5173 ou 3000)
+// ON AJOUTE LE SERVICE ICI (Avant le Build !)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp",
         policy =>
         {
-            policy.AllowAnyOrigin() // Plus tard, on mettra l'URL précise de ton front
+            policy.AllowAnyOrigin() 
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
 });
 
-// 2. CONFIGURATION DU PIPELINE (Requêtes HTTP)
+// --- 2. CONSTRUCTION DE L'APPLICATION ---
+var app = builder.Build();
+
+// --- 3. CONFIGURATION DU PIPELINE (Tout ce qui utilise app.Use...) ---
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -37,10 +36,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// ON UTILISE LA POLICY ICI
 app.UseCors("AllowReactApp");
 
-// On dit à l'application de chercher les Controllers pour répondre aux URLs
 app.MapControllers(); 
 
 app.Run();
-
