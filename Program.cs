@@ -16,7 +16,9 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowReactApp",
         policy =>
         {
-            policy.AllowAnyOrigin() 
+            // AJOUT : .SetIsOriginAllowed(origin => true) est plus robuste que .AllowAnyOrigin() 
+            // pour certains navigateurs quand il y a des erreurs serveurs.
+            policy.SetIsOriginAllowed(origin => true) 
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
@@ -24,21 +26,35 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// --- 2. CONFIGURATION DU PIPELINE ---
+// --- 2. INITIALISATION DE LA BASE DE DONNÉES (CRUCIAL POUR RENDER) ---
+// Ce bloc force la création du fichier .db et des tables au lancement
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<ApiDbContext>();
+        context.Database.EnsureCreated(); // Crée la base si elle n'existe pas
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("Erreur lors de la création de la base : " + ex.Message);
+    }
+}
 
-// On active Swagger même en production pour que tu puisses tester ton URL Render
+// --- 3. CONFIGURATION DU PIPELINE ---
+
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// Important : Sur Render, le HTTPS est géré par leur proxy, 
-// cette ligne peut parfois causer des boucles de redirection en ligne.
-// On peut la commenter ou la laisser si on configure bien Render.
-app.UseHttpsRedirection();
+// MODIFICATION : On commente souvent UseHttpsRedirection sur Render 
+// car Render gère déjà le certificat SSL avant d'arriver à ton app.
+// app.UseHttpsRedirection(); 
 
 app.UseCors("AllowReactApp");
 
 app.MapControllers(); 
 
-// --- 3. GESTION DU PORT POUR LE DÉPLOIEMENT ---
+// --- 4. GESTION DU PORT ---
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 app.Run($"http://0.0.0.0:{port}");
